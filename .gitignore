@@ -1,0 +1,54 @@
+# ─── 機密 (絕對不能上傳) ─────────────────────────
+.env
+*.env.local
+*.env.production
+secrets/
+credentials.json
+
+# ─── Python ─────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ─── 虛擬環境 ──────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ─── 打包輸出 (太大，用 GitHub Releases 發佈) ──
+build/
+dist/
+releases/
+*.zip
+*.spec.bak
+build_log.txt
+warn-*.txt
+
+# ─── 使用者本機資料 ────────────────────────────
+config.json          # 含個人詞彙/設定，用 config.example.json 當範本
+recordings/
+*.wav
+*.mp3
+*.m4a
+history.json
+usage.json
+learned_words.json
+voice-typer.log
+*.log
+
+# ─── 暫存 / IDE ────────────────────────────────
+*.tmp
+stderr_*.tmp
+stdout_*.tmp
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
