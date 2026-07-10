@@ -23,6 +23,7 @@ hidden += [
     'dotenv',
     'pyperclip',
     'keyboard',
+    'psutil',
     'numpy',
     'winreg',
     'winsound',
