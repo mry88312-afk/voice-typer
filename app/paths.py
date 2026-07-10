@@ -1,7 +1,7 @@
 """所有檔案/目錄路徑解析 + 首次啟動資料初始化。
 
-frozen (.exe): 資料存 %APPDATA%/VoiceTyper (避免 PyInstaller temp dir 重啟消失)
-source (python): 存專案根目錄
+資料一律存 %APPDATA%/VoiceTyper（frozen 與 source 皆同），避免「兩套資料世界」。
+可用環境變數 VOICE_TYPER_DATA_DIR 覆寫（測試/可攜用途）。
 """
 import os
 import sys
@@ -9,13 +9,18 @@ from pathlib import Path
 
 
 def _resolve_base_dir() -> Path:
-    if getattr(sys, 'frozen', False):
+    """使用者資料一律放 %APPDATA%/VoiceTyper — 不分 frozen / source。
+    這樣 exe、python main.py、任何程式碼副本永遠共用同一份設定，
+    根治「兩套資料世界」造成的 KEY/設定時有時無。
+    可用環境變數 VOICE_TYPER_DATA_DIR 覆寫（測試/可攜用途）。"""
+    override = os.environ.get('VOICE_TYPER_DATA_DIR')
+    if override:
+        base = Path(override)
+    else:
         appdata = os.environ.get('APPDATA')
         base = Path(appdata) / 'VoiceTyper' if appdata else Path.home() / '.voice-typer'
-        base.mkdir(parents=True, exist_ok=True)
-        return base
-    # app/paths.py → 專案根
-    return Path(__file__).resolve().parent.parent
+    base.mkdir(parents=True, exist_ok=True)
+    return base
 
 
 BASE_DIR = _resolve_base_dir()
