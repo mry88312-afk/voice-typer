@@ -1,6 +1,7 @@
 """啟動流程：單一實例鎖 → 初始化資料 → 建 stores → onboarding → 跑 app。"""
 import sys
 import time
+from pathlib import Path
 from dotenv import load_dotenv
 import customtkinter as ctk
 
@@ -8,7 +9,7 @@ from app.paths import (
     ENV_FILE, CONFIG_FILE, HISTORY_FILE, USAGE_FILE, LEARNED_WORDS_FILE,
     ensure_user_data_initialized,
 )
-from app.runtime import log, show_message
+from app.runtime import log, show_message, boot_stage
 from ui.theme import init_app_theme
 
 
@@ -53,12 +54,25 @@ def _acquire_single_instance() -> bool:
 
 
 def main():
+    # 上次啟動若沒走到 tray-ready，把卡點寫進 log（開機卡死的鐵證）
+    try:
+        _prev = (Path(str(ENV_FILE)).parent / 'boot-stage.txt')
+        if _prev.exists():
+            _s = _prev.read_text(encoding='utf-8').strip()
+            if _s and not _s.startswith('tray-ready'):
+                log.warning(f'上次啟動未完成，卡在階段: {_s}')
+    except Exception:
+        pass
+    boot_stage('start')
+
     if not _acquire_single_instance():
         log.info('偵測到已有實例在執行，本次啟動直接結束')
         sys.exit(0)
+    boot_stage('mutex-ok')
 
     ensure_user_data_initialized()
     load_dotenv(ENV_FILE, override=True)
+    boot_stage('data-init')
 
     # 健壯資料層
     from data.config import ConfigStore
@@ -77,9 +91,12 @@ def main():
 
     if config.degraded:
         log.warning('設定讀取失敗，本次以唯讀模式啟動 (不會覆蓋磁碟上的真實設定)')
+    boot_stage('stores-ready')
 
     init_app_theme()
+    boot_stage('theme-ok')
     root = ctk.CTk()
+    boot_stage('tk-root-ok')
     root.withdraw()
     root.title('Voice Typer')
 
@@ -92,6 +109,7 @@ def main():
     need_onboarding = _is_first_run()
     log.info(f'啟動檢查：首次安裝={need_onboarding}, 有任何 key={has_keys}, '
              f'config 唯讀={config.degraded}')
+    boot_stage('onboarding-checked')
 
     if need_onboarding:
         log.info('首次安裝 (.env 與 config.json 連續重試都不存在) → 顯示 Onboarding')
@@ -109,4 +127,5 @@ def main():
     # 啟動主程式 (無論有沒有 key，一律進托盤)
     from app.application import VoiceTyperApp
     app = VoiceTyperApp(root, config, env, history, usage, profiles, learned)
+    boot_stage('app-starting')
     app.start()

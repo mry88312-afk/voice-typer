@@ -1306,6 +1306,8 @@ class VoiceTyperApp:
 
         def on_ready(icon):
             icon.visible = True
+            from app.runtime import boot_stage
+            boot_stage('tray-ready')
             try:
                 icon.notify(
                     f'按 {hotkey} 開始錄音\n圖示在右下角 ^，可拖到工作列固定',

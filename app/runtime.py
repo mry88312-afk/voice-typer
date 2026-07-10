@@ -43,3 +43,14 @@ def fatal(title, text):
     log.error(f"{title}: {text}")
     show_message(title, text, error=True)
     sys.exit(1)
+
+
+def boot_stage(name: str):
+    """寫入啟動階段麵包屑（覆寫式、絕不拋錯）。卡死時看這個檔就知道卡在哪一步。"""
+    try:
+        from app.paths import BASE_DIR
+        import time as _t
+        (BASE_DIR / 'boot-stage.txt').write_text(
+            f'{name} {_t.strftime("%Y-%m-%d %H:%M:%S")}', encoding='utf-8')
+    except Exception:
+        pass
