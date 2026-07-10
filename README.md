@@ -10,7 +10,7 @@
 
 ## ✨ 特色
 
-- 🎤 **全域熱鍵打字** — 在任何視窗按 `Ctrl + Alt + Space` 開始錄音，再按一次結束，2-3 秒後文字自動出現
+- 🎤 **全域熱鍵打字** — 在任何視窗按 `Tab + \`` 開始錄音，再按一次結束，2-3 秒後文字自動出現（無修飾鍵的組合會自動吞鍵，不會把 Tab/\` 打進游標）
 - 🔀 **多 Provider + 自動 Fallback** — OpenAI / Anthropic / Google / Groq，Groq 塞車自動切 OpenAI
 - ⚡ **Streaming 模式** — 邊講邊出文字，VAD 自動切段
 - 🎬 **會議錄音 + 摘要** — 一鍵錄完整會議，自動產生：會議標題、4 區塊摘要、決議、行動項目（含優先級 + 截止日）、關鍵字
@@ -27,11 +27,16 @@
 
 ## 📦 安裝
 
-### 方法 A：下載打包好的 .exe（推薦）
+### 方法 A：一般使用者（推薦）
 
-到 [Releases](../../releases) 下載最新版 `VoiceTyper-vX.X-win-x64.zip`，解壓後執行 `VoiceTyper.exe`。
+1. 到 [Releases](../../releases) 下載最新版 `VoiceTyper-vX.X-win-x64.zip`。
+2. 解壓縮到任一資料夾。
+3. 雙擊 `install.bat`（會複製到 `%LOCALAPPDATA%\Programs\VoiceTyper`、建立開機自啟動與桌面捷徑並啟動）。
+4. 首次啟動出現設定精靈，填入至少一個 API Key。
 
-### 方法 B：從原始碼跑
+移除：執行 `uninstall.bat`（個人設定與 Key 會保留在 `%APPDATA%\VoiceTyper`）。
+
+### 方法 B：開發者（從原始碼跑）
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/voice-typer.git
@@ -45,8 +50,8 @@ python main.py
 ### 方法 C：自己 build .exe
 
 ```bash
-pip install pyinstaller
-pyinstaller voice_typer.spec --noconfirm
+build.bat
+# 或手動：venv\Scripts\pyinstaller.exe voice_typer.spec --noconfirm
 # → dist/VoiceTyper/VoiceTyper.exe
 ```
 
@@ -80,11 +85,14 @@ GOOGLE_API_KEY=AIza...        # 會議聲紋分離用
 
 | 熱鍵 | 動作 |
 |---|---|
-| `Ctrl + Alt + Space` | 開始 / 結束錄音 |
+| `Tab + \`` | 開始 / 結束錄音（無修飾鍵，自動吞鍵）|
 | `Ctrl + Alt + X` | 取消錄音 |
 | `Ctrl + Shift + L` | Streaming 模式（邊講邊出文字）|
 
-托盤右鍵選單還有：開始會議錄音、匯入音檔、會議紀錄、設定、歷史紀錄、用量統計。
+熱鍵可在「設定 → 快捷鍵」修改，並有「🎯 錄製」按鈕可直接按鍵錄製。
+若吞鍵造成輸入法異常，把 `%APPDATA%\VoiceTyper\config.json` 的 `"hotkey_suppress"` 改成 `false` 再重啟即可關閉吞鍵。
+
+托盤右鍵選單還有：開始會議錄音、匯入音檔、會議紀錄、設定、歷史紀錄、用量統計、🔄 重新啟動。
 
 ---
 
@@ -165,41 +173,69 @@ ASR + Diarization Fusion:
 
 ```
 voice-typer/
-├── main.py                    主程式 (~1400 行)
-├── recorder.py                單發錄音
-├── streaming_recorder.py      Streaming VAD 錄音
-├── meeting_recorder.py        會議錄音 (mic + system)
-├── meeting_processor.py       會議轉錄 + ASR fusion + 摘要
-├── transcriber.py             OpenAI Whisper (legacy)
-├── enhancer.py                Claude (legacy)
-├── fallback_transcriber.py    超時 fallback wrapper
-├── providers/                 Provider 抽象 + 4 個實作
-│   ├── base.py
-│   ├── openai_provider.py
-│   ├── anthropic_provider.py
-│   ├── google_provider.py
-│   └── groq_provider.py
-├── storage/                   持久化管理
-│   ├── config_manager.py
-│   ├── env_manager.py
-│   ├── history_manager.py
-│   ├── usage_manager.py
-│   ├── profile_manager.py
-│   └── learned_words_manager.py
+├── main.py                    入口點（--autostart 延遲啟動）
+├── app/                       啟動 / 編排層
+│   ├── bootstrap.py           單一實例鎖 + 殭屍接管 + 啟動流程
+│   ├── application.py         主編排器（托盤 / 熱鍵 / 自癒看門狗）
+│   ├── paths.py               路徑解析（一律 %APPDATA%\VoiceTyper）
+│   └── runtime.py             logger / 訊息框 / 啟動麵包屑 / 例外掛勾
+├── core/                      純業務邏輯
+│   ├── recording/             recorder / streaming / meeting
+│   ├── transcription/         fallback + providers/（openai/anthropic/google/groq）
+│   ├── meeting/processor.py   會議轉錄 + ASR fusion + 摘要
+│   ├── text/hallucinations.py Whisper 幻覺黑名單
+│   └── hotkeys.py
+├── data/                      健壯持久化（原子寫入 + 備份 + 重試）
+│   ├── config.py env.py profiles.py history.py usage.py learned.py
+│   └── store.py resources.py
+├── resources/                 資料即設定（預設值 / provider / schema / 黑名單）
 ├── ui/                        CustomTkinter 視窗
-│   ├── theme.py               色彩 token + 字型
-│   ├── settings_window.py     7 個 tabs 設定
-│   ├── onboarding.py          首次設定 wizard
-│   ├── waveform.py            脈動波形 overlay
-│   ├── meeting_window.py      會議進度 + 結果
-│   ├── meeting_history_window.py
-│   ├── history_window.py
-│   └── usage_window.py
+│   ├── theme.py settings_window.py onboarding.py waveform.py
+│   └── meeting_window.py meeting_history_window.py history_window.py usage_window.py
+├── tools/migrate_merge_data.py  一次性資料合併腳本
+├── installer/                 install.bat / uninstall.bat / 安裝說明.txt
+├── build.bat                  一鍵重打包
+├── restart-voice-typer.bat    桌面一鍵重啟
 ├── voice_typer.spec           PyInstaller spec (onedir)
 ├── requirements.txt
-├── .env.example
-└── config.json                預設 config
+└── .env.example / config.example.json
 ```
+
+---
+
+## 📁 資料與設定位置
+
+所有個人資料都放在 `%APPDATA%\VoiceTyper\`（不分 exe / 原始碼啟動，永遠同一份）：
+
+| 檔案 | 內容 |
+|---|---|
+| `.env` | API Keys（只存本機，不上傳）|
+| `config.json` | 設定、快捷鍵、情境 profile、詞彙表 |
+| `history.json` / `usage.json` / `learned_words.json` | 歷史 / 用量 / 自學詞典 |
+| `voice-typer.log` | 執行日誌（回報問題時附上）|
+| `boot-stage.txt` | 最後一次啟動走到的階段（診斷開機卡死用）|
+| `recordings/` | 會議 / 匯入的音檔 |
+
+> 可用環境變數 `VOICE_TYPER_DATA_DIR` 覆寫資料目錄（測試 / 可攜用途）。
+
+---
+
+## 🛟 疑難排解
+
+- **點了沒反應 / 打不開** → 雙擊桌面「Voice Typer」捷徑，或托盤右鍵 → 🔄 重新啟動。程式若還在跑，重複啟動會提示「已在執行中」而非默默失敗。
+- **按快捷鍵沒反應（圖示還在）** → 睡眠喚醒後熱鍵可能暫時失效，看門狗約 2 分鐘會自動重註冊；等不及就托盤 → 重新啟動。
+- **一直卡在「處理中」** → 逾時 5 分鐘會自動重設並通知，之後再按一次快捷鍵即可。
+- **按 Tab+\` 會把字打進游標 / 輸入法異常** → 把 `config.json` 的 `"hotkey_suppress"` 改 `false` 重啟關閉吞鍵；或到設定改成含修飾鍵的快捷鍵。
+- **一直要我重填 API Key** → 已修正（資料統一到 `%APPDATA%\VoiceTyper`）。若仍發生請回報。
+- **如何回報** → 附上 `%APPDATA%\VoiceTyper\` 裡的 `voice-typer.log` 與 `boot-stage.txt`。
+
+---
+
+## 🔒 隱私聲明
+
+- 錄音的**音訊**會送到 OpenAI / Groq / Google 做**轉錄**；轉出的**文字**會送到 Anthropic 做**潤色**。
+- **API Key 只存在你自己電腦**的 `%APPDATA%\VoiceTyper\.env`，不會上傳到任何伺服器。
+- 本專案不收集任何遙測 / 使用資料。
 
 ---
 
