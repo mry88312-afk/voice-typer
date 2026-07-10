@@ -1,0 +1,7 @@
+# 批次檔一律用 CRLF，否則 cmd.exe 會誤讀（掉字、指令解析錯誤）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# Python / 文字檔用 LF
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
