@@ -1223,6 +1223,7 @@ class VoiceTyperApp:
         log.info(f"   錄音/結束: {self.config_mgr.get('hotkey', 'ctrl+alt+space')}")
         log.info(f"   取消錄音:  {self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x')}")
         log.info(f"   AI 潤色:   {'開啟' if self.enhancer else '關閉'}")
+        log.info(f"   資料目錄:  {BASE_DIR}")
         log.info("=" * 50)
 
         # tk mainloop (主執行緒)
