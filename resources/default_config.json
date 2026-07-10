@@ -1,6 +1,7 @@
 {
   "_comment": "全新安裝的預設設定。使用者的實際設定存在 %APPDATA%/VoiceTyper/config.json；這份只當第一次啟動的範本與缺漏欄位的後援。profiles 由 default_profiles.json 注入。",
-  "hotkey": "ctrl+alt+space",
+  "hotkey": "tab+`",
+  "hotkey_suppress": true,
   "cancel_hotkey": "ctrl+alt+x",
   "streaming_hotkey": "ctrl+shift+l",
   "language": "zh",

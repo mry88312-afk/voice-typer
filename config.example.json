@@ -1,5 +1,5 @@
 {
-  "hotkey": "ctrl+alt+space",
+  "hotkey": "tab+`",
   "cancel_hotkey": "ctrl+alt+x",
   "language": "zh",
   "whisper_prompt": "嗯，這是繁體中文的對話內容。",

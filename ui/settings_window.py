@@ -1088,7 +1088,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         # 5. 快捷鍵
         self.config_mgr.set('hotkey',
-                            self.hotkey_entry.get().strip() or 'ctrl+alt+space')
+                            self.hotkey_entry.get().strip() or 'tab+`')
         self.config_mgr.set('cancel_hotkey',
                             self.cancel_hotkey_entry.get().strip() or 'ctrl+alt+x')
         self.config_mgr.set('streaming_hotkey',

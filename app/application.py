@@ -1224,6 +1224,14 @@ class VoiceTyperApp:
         self.root.after(500, lambda: os._exit(0))
 
     # ---------- 快捷鍵管理 (熱重載 + 自癒) ----------
+    _MODIFIER_KEYS = ('ctrl', 'alt', 'shift', 'win', 'windows')
+
+    @staticmethod
+    def _combo_needs_suppress(combo: str) -> bool:
+        """不含標準修飾鍵的組合（如 tab+`）→ 需要吞掉按鍵，否則會把字打進游標處。"""
+        parts = [p.strip().lower() for p in combo.split('+') if p.strip()]
+        return bool(parts) and not any(p in VoiceTyperApp._MODIFIER_KEYS for p in parts)
+
     def _register_hotkeys(self):
         """註冊全部快捷鍵。逐鍵獨立處理：一個壞掉不影響其他、更不會讓 app 退出。
         可重複呼叫（設定變更 / 看門狗）— 會先清掉舊的再註冊新的。
@@ -1235,7 +1243,7 @@ class VoiceTyperApp:
             pass
 
         bindings = [
-            ('錄音/結束', self.config_mgr.get('hotkey', 'ctrl+alt+space'),
+            ('錄音/結束', self.config_mgr.get('hotkey', 'tab+`'),
              self._toggle_recording),
             ('取消錄音', self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x'),
              self._cancel_recording),
@@ -1249,8 +1257,10 @@ class VoiceTyperApp:
                 log.warning(f'快捷鍵「{name}」未設定，略過')
                 continue
             try:
-                keyboard.add_hotkey(combo, callback)
-                log.debug(f'快捷鍵註冊: {name} = {combo}')
+                suppress = (self.config_mgr.get('hotkey_suppress', True)
+                            and self._combo_needs_suppress(combo))
+                keyboard.add_hotkey(combo, callback, suppress=suppress)
+                log.debug(f'快捷鍵註冊: {name} = {combo} (suppress={suppress})')
             except Exception as e:
                 log.error(f'快捷鍵「{name}」({combo}) 註冊失敗: {e}')
                 failed.append(f'{name} ({combo})')
@@ -1297,7 +1307,7 @@ class VoiceTyperApp:
 
         log.info("=" * 50)
         log.info("🎙️  Voice Typer 已啟動 (商業版 v2)")
-        log.info(f"   錄音/結束: {self.config_mgr.get('hotkey', 'ctrl+alt+space')}")
+        log.info(f"   錄音/結束: {self.config_mgr.get('hotkey', 'tab+`')}")
         log.info(f"   取消錄音:  {self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x')}")
         log.info(f"   AI 潤色:   {'開啟' if self.enhancer else '關閉'}")
         log.info(f"   資料目錄:  {BASE_DIR}")
