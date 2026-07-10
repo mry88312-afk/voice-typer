@@ -4,6 +4,7 @@
 import os
 import sys
 import logging
+import subprocess
 import threading
 import time
 from logging.handlers import RotatingFileHandler
@@ -1126,6 +1127,38 @@ class VoiceTyperApp:
             error=False,
         )
 
+    def _restart(self, icon=None, item=None):
+        log.info('🔄 使用者要求重新啟動')
+        try:
+            if self.tray_icon:
+                self.tray_icon.stop()
+        except Exception:
+            pass
+        # 先釋放單一實例鎖，讓新程序拿得到
+        try:
+            import ctypes
+            from app import bootstrap
+            if getattr(bootstrap, '_instance_mutex', None):
+                ctypes.windll.kernel32.CloseHandle(bootstrap._instance_mutex)
+                bootstrap._instance_mutex = None
+        except Exception:
+            pass
+        try:
+            (BASE_DIR / 'heartbeat.txt').unlink(missing_ok=True)
+            (BASE_DIR / 'voice-typer.pid').unlink(missing_ok=True)
+        except Exception:
+            pass
+        try:
+            if getattr(sys, 'frozen', False):
+                subprocess.Popen([sys.executable],
+                                 cwd=str(Path(sys.executable).parent))
+            else:
+                subprocess.Popen([sys.executable, str(BUNDLE_DIR / 'main.py')],
+                                 cwd=str(BUNDLE_DIR))
+        except Exception as e:
+            log.error(f'重啟失敗: {e}')
+        os._exit(0)
+
     def _heartbeat_tick(self):
         try:
             (BASE_DIR / 'heartbeat.txt').write_text(str(time.time()), encoding='utf-8')
@@ -1310,6 +1343,7 @@ class VoiceTyperApp:
             pystray.MenuItem('開啟 log 檔', self._open_log),
             pystray.MenuItem('關於', self._show_about),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem('🔄  重新啟動', self._restart),
             pystray.MenuItem('退出', self._quit),
         )
 
