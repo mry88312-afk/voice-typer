@@ -1126,8 +1126,20 @@ class VoiceTyperApp:
             error=False,
         )
 
+    def _heartbeat_tick(self):
+        try:
+            (BASE_DIR / 'heartbeat.txt').write_text(str(time.time()), encoding='utf-8')
+        except Exception:
+            pass
+        self.root.after(15_000, self._heartbeat_tick)
+
     def _quit(self, icon=None, item=None):
         log.info("👋 退出")
+        try:
+            (BASE_DIR / 'heartbeat.txt').unlink(missing_ok=True)
+            (BASE_DIR / 'voice-typer.pid').unlink(missing_ok=True)
+        except Exception:
+            pass
         try:
             if self.is_recording:
                 self.recorder.stop()
@@ -1225,6 +1237,13 @@ class VoiceTyperApp:
         log.info(f"   AI 潤色:   {'開啟' if self.enhancer else '關閉'}")
         log.info(f"   資料目錄:  {BASE_DIR}")
         log.info("=" * 50)
+
+        # 心跳：讓「第二個實例」能判斷本實例是否還活著
+        try:
+            (BASE_DIR / 'voice-typer.pid').write_text(str(os.getpid()), encoding='utf-8')
+        except Exception:
+            pass
+        self.root.after(1000, self._heartbeat_tick)
 
         # tk mainloop (主執行緒)
         self.root.mainloop()

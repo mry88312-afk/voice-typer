@@ -53,6 +53,42 @@ def _acquire_single_instance() -> bool:
         return True
 
 
+def _takeover_zombie_instance() -> bool:
+    """舊實例握著 mutex 但沒心跳 → 判定殭屍，殺掉接管。
+    回傳 True = 已接管可繼續啟動；False = 對方活得好好的。"""
+    import os, time
+    from app.paths import BASE_DIR
+    try:
+        import psutil
+    except Exception:
+        return False    # 沒有 psutil 就不冒險殺程序
+    try:
+        hb = BASE_DIR / 'heartbeat.txt'
+        hb_age = None
+        if hb.exists():
+            hb_age = time.time() - float(hb.read_text(encoding='utf-8').strip() or 0)
+        if hb_age is not None and hb_age < 60:
+            return False            # 心跳新鮮 → 真的在跑
+        pid_file = BASE_DIR / 'voice-typer.pid'
+        if not pid_file.exists():
+            return False            # 不知道 PID，不冒險
+        pid = int(pid_file.read_text(encoding='utf-8').strip())
+        if pid == os.getpid():
+            return False
+        p = psutil.Process(pid)
+        name = p.name().lower()
+        if not any(s in name for s in ('voicetyper', 'python')):
+            return False            # PID 已被別的程式重用
+        if time.time() - p.create_time() < 90:
+            return False            # 對方剛啟動（可能還在初始化），給它時間
+        p.kill()
+        p.wait(timeout=10)
+        time.sleep(1)
+        return True                 # 我們手上的 mutex handle 仍有效，直接繼續啟動
+    except Exception:
+        return False
+
+
 def main():
     # 上次啟動若沒走到 tray-ready，把卡點寫進 log（開機卡死的鐵證）
     try:
@@ -66,8 +102,17 @@ def main():
     boot_stage('start')
 
     if not _acquire_single_instance():
-        log.info('偵測到已有實例在執行，本次啟動直接結束')
-        sys.exit(0)
+        if _takeover_zombie_instance():
+            log.warning('偵測到前一個實例無心跳（殭屍），已強制接管重啟')
+        else:
+            log.info('偵測到已有實例在執行且心跳正常，本次啟動結束')
+            show_message(
+                'Voice Typer',
+                'Voice Typer 已經在執行中（右下角托盤）。\n\n'
+                '如需重開：托盤圖示右鍵 → 重新啟動。',
+                error=False,
+            )
+            sys.exit(0)
     boot_stage('mutex-ok')
 
     ensure_user_data_initialized()
