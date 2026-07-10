@@ -76,6 +76,8 @@ class VoiceTyperApp:
         # 狀態
         self.is_recording = False
         self.is_processing = False
+        self._processing_since = None
+        self._last_wd_tick = time.time()
         self.lock = threading.Lock()
 
         # UI 元件 (lazy init)
@@ -415,6 +417,7 @@ class VoiceTyperApp:
         log.info("⏹️  錄音結束")
         self.is_recording = False
         self.is_processing = True
+        self._processing_since = time.time()
         self._update_tray('processing')
         self._play_sound('stop')
 
@@ -591,6 +594,7 @@ class VoiceTyperApp:
                 self._notify_tray(f'處理失敗: {str(e)[:60]}')
         finally:
             self.is_processing = False
+            self._processing_since = None
             self._update_tray('idle')
             self._hide_waveform()
 
@@ -1159,6 +1163,26 @@ class VoiceTyperApp:
             log.error(f'重啟失敗: {e}')
         os._exit(0)
 
+    def _state_watchdog(self):
+        """每 30 秒巡檢：1) 卡在處理中 >5 分鐘 → 強制重設  2) 偵測睡醒 → 立刻重註冊快捷鍵"""
+        now = time.time()
+        try:
+            if (self.is_processing and self._processing_since
+                    and now - self._processing_since > 300):
+                log.error('⏱ 處理逾時 (>5 分鐘)，強制重設狀態')
+                self.is_processing = False
+                self._processing_since = None
+                self._update_tray('idle')
+                self._hide_waveform()
+                self._notify_tray('處理逾時已重設，請再按一次快捷鍵重新錄音')
+            if now - self._last_wd_tick > 90:      # 時鐘跳躍 → 剛從睡眠喚醒
+                log.info('💤 偵測到睡眠喚醒，立即重新註冊快捷鍵')
+                self._register_hotkeys()
+        except Exception as e:
+            log.error(f'state watchdog: {e}')
+        self._last_wd_tick = now
+        self.root.after(30_000, self._state_watchdog)
+
     def _heartbeat_tick(self):
         try:
             (BASE_DIR / 'heartbeat.txt').write_text(str(time.time()), encoding='utf-8')
@@ -1218,7 +1242,7 @@ class VoiceTyperApp:
                 continue
             try:
                 keyboard.add_hotkey(combo, callback)
-                log.info(f'快捷鍵註冊: {name} = {combo}')
+                log.debug(f'快捷鍵註冊: {name} = {combo}')
             except Exception as e:
                 log.error(f'快捷鍵「{name}」({combo}) 註冊失敗: {e}')
                 failed.append(f'{name} ({combo})')
@@ -1228,12 +1252,12 @@ class VoiceTyperApp:
         return not failed
 
     def _hotkey_watchdog(self):
-        """每 10 分鐘重新註冊快捷鍵 — 修復睡眠喚醒後 keyboard hook 失效的問題"""
+        """每 2 分鐘重新註冊快捷鍵 — 修復睡眠喚醒後 keyboard hook 失效的問題"""
         try:
             self._register_hotkeys()
         except Exception as e:
             log.error(f'快捷鍵看門狗失敗: {e}')
-        self.root.after(10 * 60 * 1000, self._hotkey_watchdog)
+        self.root.after(2 * 60 * 1000, self._hotkey_watchdog)
 
     # ---------- 啟動流程 ----------
     def _ensure_transcriber_ready(self):
@@ -1248,8 +1272,8 @@ class VoiceTyperApp:
 
     def start(self):
         self._register_hotkeys()
-        # 看門狗：10 分鐘後開始週期性自癒
-        self.root.after(10 * 60 * 1000, self._hotkey_watchdog)
+        # 看門狗：2 分鐘後開始週期性自癒
+        self.root.after(2 * 60 * 1000, self._hotkey_watchdog)
         # 安全網：開機 3 秒後若金鑰沒讀到 (race)，自動補建
         self.root.after(3000, self._ensure_transcriber_ready)
 
@@ -1277,6 +1301,8 @@ class VoiceTyperApp:
         except Exception:
             pass
         self.root.after(1000, self._heartbeat_tick)
+        # 狀態看門狗：卡處理中自動重設 + 睡醒重註冊快捷鍵
+        self.root.after(30_000, self._state_watchdog)
 
         # tk mainloop (主執行緒)
         self.root.mainloop()
