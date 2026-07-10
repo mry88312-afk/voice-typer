@@ -8,6 +8,11 @@
   ui/         介面層 (視窗、主題、波形)
 """
 import sys
+import time
+
+if '--autostart' in sys.argv:
+    # 開機自啟動：等桌面/服務就緒再初始化，避開登入瞬間的 GUI 卡死
+    time.sleep(25)
 
 from app.runtime import log, show_message
 from app.bootstrap import main
