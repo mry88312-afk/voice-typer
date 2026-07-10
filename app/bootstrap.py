@@ -93,9 +93,11 @@ def main():
         log.warning('設定讀取失敗，本次以唯讀模式啟動 (不會覆蓋磁碟上的真實設定)')
     boot_stage('stores-ready')
 
-    init_app_theme()
+    from ui.theme import init_ctk_default_font
+    init_app_theme()          # 只設外觀模式/色系（不碰字型、不需要 root）
     boot_stage('theme-ok')
     root = ctk.CTk()
+    init_ctk_default_font()   # root 已存在，字型偵測安全
     boot_stage('tk-root-ok')
     root.withdraw()
     root.title('Voice Typer')

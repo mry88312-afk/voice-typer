@@ -21,18 +21,9 @@ def get_font_family():
 
     try:
         import tkinter.font as tkfont
-        # 建立暫時 root 取得 family 列表 (如果還沒 root，建立一個臨時)
-        try:
-            root = ctk._get_appearance_mode  # 偵測 ctk 是否已初始化
-            families = set(tkfont.families())
-        except Exception:
-            import tkinter as tk
-            tmp = tk.Tk()
-            tmp.withdraw()
-            families = set(tkfont.families())
-            tmp.destroy()
+        families = set(tkfont.families())   # 需要已存在的 Tk root
     except Exception:
-        families = set()
+        families = set()                    # 沒有 root / 任何錯誤 → 直接用預設字型，絕不自建 Tk
 
     for candidate in [
         'Microsoft JhengHei UI',   # Win7+ 內建，中文 UI 字型
@@ -183,9 +174,10 @@ def set_theme(mode: str):
 
 
 def init_app_theme():
+    """只設外觀模式/色系（不碰字型、不需要 root）。字型偵測改由 root 建立後呼叫
+    init_ctk_default_font()，避免在登入瞬間無 root 時自建臨時 Tk 造成卡死。"""
     ctk.set_appearance_mode('system')
     ctk.set_default_color_theme('blue')
-    init_ctk_default_font()
 
 
 def font(size=None, weight='normal'):
