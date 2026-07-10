@@ -4,7 +4,7 @@ from pathlib import Path
 import customtkinter as ctk
 
 from ui.theme import get_colors, font, Tokens, apply_font_to_descendants
-from storage.usage_manager import PROVIDER_DISPLAY, PROVIDER_COLORS
+from data.usage import PROVIDER_DISPLAY, PROVIDER_COLORS
 
 
 # 模型名稱簡稱

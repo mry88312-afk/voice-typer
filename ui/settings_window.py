@@ -4,7 +4,7 @@ import threading
 import customtkinter as ctk
 
 from ui.theme import get_colors, font, Tokens, apply_font_to_descendants
-from providers import TRANSCRIBER_PROVIDERS, ENHANCER_PROVIDERS
+from core.transcription import TRANSCRIBER_PROVIDERS, ENHANCER_PROVIDERS
 
 
 # 4 個 provider 的 API Key 資訊
@@ -718,7 +718,7 @@ class SettingsWindow(ctk.CTkToplevel):
             padx=Tokens.PAD_LG, pady=(Tokens.PAD_XL, Tokens.PAD_SM)
         )
 
-        from recorder import list_input_devices
+        from core.recording import list_input_devices
         device_names = ['(系統預設)'] + [name for _, name in list_input_devices()]
         saved_device = self.config_mgr.get('input_device', '') or '(系統預設)'
         if saved_device not in device_names:
@@ -766,7 +766,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         def run():
             try:
-                from recorder import test_input_device
+                from core.recording import test_input_device
                 name = self.input_device_var.get()
                 device = '' if name == '(系統預設)' else name
                 result = test_input_device(device)

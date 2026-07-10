@@ -1,0 +1,81 @@
+{
+  "_comment": "設定視窗由這份 schema 自動生成。要加一個設定項，就在對應 tab 的 fields 加一筆，不用改 UI 程式碼。type 決定渲染哪種控件；bind 決定存到 config 的哪個 key (env: 開頭表示存到 .env)。type=custom 交給 schema_form 裡註冊的特製 widget。",
+  "tabs": [
+    {
+      "id": "api_keys",
+      "title": "API Keys",
+      "fields": [
+        {"type": "custom", "widget": "api_keys", "help": "至少設定一個轉錄 provider (OpenAI 或 Groq) 才能用"}
+      ]
+    },
+    {
+      "id": "engines",
+      "title": "引擎",
+      "fields": [
+        {"type": "section", "label": "語音轉錄"},
+        {"type": "provider_model", "bind": "transcriber", "kind": "transcribe", "label": "轉錄引擎"},
+        {"type": "section", "label": "AI 潤色"},
+        {"type": "provider_model", "bind": "enhancer", "kind": "enhance", "label": "潤色引擎"}
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "情境",
+      "fields": [
+        {"type": "custom", "widget": "profiles"}
+      ]
+    },
+    {
+      "id": "recognition",
+      "title": "辨識",
+      "fields": [
+        {"type": "section", "label": "辨識語言"},
+        {"type": "dropdown", "bind": "language", "label": "語言",
+         "options": ["auto", "zh", "en", "ja", "ko"],
+         "help": "auto = 自動偵測，zh = 中文 (推薦)，en = 英文"},
+        {"type": "section", "label": "Whisper Prompt"},
+        {"type": "textarea", "bind": "whisper_prompt", "height": 90,
+         "help": "引導辨識風格的「樣本對話」，建議帶標點符號示範，不要寫成指令"},
+        {"type": "section", "label": "麥克風"},
+        {"type": "custom", "widget": "mic_device", "bind": "input_device"}
+      ]
+    },
+    {
+      "id": "learned",
+      "title": "自學詞典",
+      "fields": [
+        {"type": "custom", "widget": "learned_words"}
+      ]
+    },
+    {
+      "id": "hotkeys",
+      "title": "快捷鍵",
+      "fields": [
+        {"type": "section", "label": "全域快捷鍵"},
+        {"type": "hotkey", "bind": "hotkey", "label": "開始 / 結束錄音", "default": "ctrl+alt+space"},
+        {"type": "hotkey", "bind": "streaming_hotkey", "label": "Streaming 模式", "default": "ctrl+shift+l"},
+        {"type": "hotkey", "bind": "cancel_hotkey", "label": "取消錄音", "default": "ctrl+alt+x"},
+        {"type": "note", "label": "避免與輸入法 (Ctrl+Shift+Space) 或 Windows 快捷鍵衝突"}
+      ]
+    },
+    {
+      "id": "advanced",
+      "title": "進階",
+      "fields": [
+        {"type": "section", "label": "行為"},
+        {"type": "toggle", "bind": "auto_paste", "label": "自動貼上 (關閉則只複製到剪貼簿)"},
+        {"type": "toggle", "bind": "play_sound", "label": "播放開始/結束提示音"},
+        {"type": "toggle", "bind": "restore_clipboard", "label": "貼上後還原原本剪貼簿"},
+        {"type": "toggle", "bind": "show_waveform", "label": "顯示錄音波形浮窗"},
+        {"type": "toggle", "bind": "save_history", "label": "保存辨識歷史"},
+        {"type": "toggle", "bind": "use_speaker_diarization", "label": "會議錄音聲紋分離 (需 Google API Key)"},
+        {"type": "section", "label": "外觀"},
+        {"type": "dropdown", "bind": "theme", "label": "主題", "options": ["system", "dark", "light"]},
+        {"type": "section", "label": "進階參數 (VAD 切段)"},
+        {"type": "number", "bind": "vad_silence_threshold", "label": "靜音門檻 RMS", "step": 0.001},
+        {"type": "number", "bind": "vad_silence_flush_seconds", "label": "靜音切段秒數", "step": 0.1},
+        {"type": "number", "bind": "silence_rms_threshold", "label": "整段靜音判定 RMS", "step": 0.001}
+      ]
+    }
+  ]
+}

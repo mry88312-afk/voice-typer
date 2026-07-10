@@ -1,0 +1,18 @@
+{
+  "_comment": "Whisper 常見幻覺黑名單。比對前會先正規化 (轉小寫、只留英數+中日韓字)。短於 short_max_len 且無中文字也視為幻覺。要加新的就加進 blacklist。",
+  "short_max_len": 8,
+  "blacklist": [
+    "字幕由amara.org社群提供", "amaraorg", "字幕志愿者", "mariapardiralscat",
+    "subtitlesbysub", "subtitleby", "transcribedby",
+    "请订阅", "請訂閱", "我要訂閱", "訂閱頻道", "订阅频道",
+    "感謝您的觀看", "感谢您的观看", "感謝觀看", "感谢观看",
+    "謝謝大家", "谢谢大家", "謝謝收看", "謝謝觀看",
+    "小鈴鐺", "小铃铛", "按讚分享", "点赞分享",
+    "初音", "初音ミク", "hatsunemiku", "kizunaai",
+    "thanksforwatching", "thankyouforwatching",
+    "subscribetomychannel", "pleasesubscribe",
+    "mbc뉴스", "sbs뉴스", "jtbc뉴스",
+    "ご視聴ありがとうございました", "チャンネル登録",
+    "。。。。", "......"
+  ]
+}

@@ -29,6 +29,7 @@ DEFAULT_CONFIG = {
     'use_speaker_diarization': False,   # 會議錄音聲紋分離 (需 Google API Key)
     'theme': 'system',
     'first_run': False,
+    'setup_completed': False,   # 設定過一次 API key 後永久 True，之後不再跳 onboarding
     # 舊版相容 (將由 profile 取代)
     'vocabulary': [],
     'enable_ai_enhance': False,

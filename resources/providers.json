@@ -1,0 +1,66 @@
+{
+  "_comment": "所有 AI provider 的定義。加新 provider / model / 改定價都改這裡，不用動 code。colors/display 給 UI 用，pricing 給用量統計用。",
+  "providers": {
+    "openai": {
+      "display_name": "OpenAI",
+      "color": "#10B981",
+      "api_key_env": "OPENAI_API_KEY",
+      "api_key_prefix": "sk-",
+      "api_key_help_url": "https://platform.openai.com/api-keys",
+      "transcribe_models": [
+        {"id": "whisper-1", "name": "Whisper v1", "per_minute": 0.006},
+        {"id": "gpt-4o-mini-transcribe", "name": "GPT-4o mini transcribe", "per_minute": 0.003},
+        {"id": "gpt-4o-transcribe", "name": "GPT-4o transcribe", "per_minute": 0.006}
+      ],
+      "enhance_models": [
+        {"id": "gpt-4o-mini", "name": "GPT-4o mini", "input_per_mtok": 0.15, "output_per_mtok": 0.60},
+        {"id": "gpt-4o", "name": "GPT-4o", "input_per_mtok": 2.50, "output_per_mtok": 10.00},
+        {"id": "gpt-4.1-mini", "name": "GPT-4.1 mini", "input_per_mtok": 0.40, "output_per_mtok": 1.60}
+      ]
+    },
+    "anthropic": {
+      "display_name": "Anthropic Claude",
+      "color": "#B179DE",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "api_key_prefix": "sk-ant-",
+      "api_key_help_url": "https://console.anthropic.com/keys",
+      "transcribe_models": [],
+      "enhance_models": [
+        {"id": "claude-haiku-4-5-20251001", "name": "Claude Haiku 4.5 (快)", "input_per_mtok": 1.00, "output_per_mtok": 5.00},
+        {"id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6 (聰明)", "input_per_mtok": 3.00, "output_per_mtok": 15.00},
+        {"id": "claude-opus-4-7", "name": "Claude Opus 4.7 (最強)", "input_per_mtok": 15.00, "output_per_mtok": 75.00}
+      ]
+    },
+    "google": {
+      "display_name": "Google Gemini",
+      "color": "#4285F4",
+      "api_key_env": "GOOGLE_API_KEY",
+      "api_key_prefix": "",
+      "api_key_help_url": "https://aistudio.google.com/apikey",
+      "transcribe_models": [
+        {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "tokens_per_audio_second": 32, "input_per_mtok": 0.30, "output_per_mtok": 2.50},
+        {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "tokens_per_audio_second": 32, "input_per_mtok": 1.25, "output_per_mtok": 10.00}
+      ],
+      "enhance_models": [
+        {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "input_per_mtok": 0.30, "output_per_mtok": 2.50},
+        {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "input_per_mtok": 1.25, "output_per_mtok": 10.00}
+      ]
+    },
+    "groq": {
+      "display_name": "Groq",
+      "color": "#FF6B35",
+      "api_key_env": "GROQ_API_KEY",
+      "api_key_prefix": "gsk_",
+      "api_key_help_url": "https://console.groq.com/keys",
+      "transcribe_models": [
+        {"id": "whisper-large-v3-turbo", "name": "Whisper Large v3 Turbo (最快免費)", "per_minute": 0.000667},
+        {"id": "whisper-large-v3", "name": "Whisper Large v3 (準)", "per_minute": 0.00185}
+      ],
+      "enhance_models": [
+        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B (聰明超快)", "input_per_mtok": 0.59, "output_per_mtok": 0.79},
+        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B (最快)", "input_per_mtok": 0.05, "output_per_mtok": 0.08}
+      ]
+    }
+  },
+  "transcribe_fallback_order": ["openai", "groq", "google"]
+}

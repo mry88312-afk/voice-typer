@@ -31,7 +31,8 @@ build_log.txt
 warn-*.txt
 
 # ─── 使用者本機資料 ────────────────────────────
-config.json          # 含個人詞彙/設定，用 config.example.json 當範本
+# 含個人詞彙/設定，用 config.example.json 當範本（行尾註解在 gitignore 無效，故獨立成行）
+config.json
 recordings/
 *.wav
 *.mp3
@@ -41,6 +42,10 @@ usage.json
 learned_words.json
 voice-typer.log
 *.log
+legacy_backup/
+boot-stage.txt
+heartbeat.txt
+voice-typer.pid
 
 # ─── 暫存 / IDE ────────────────────────────────
 *.tmp

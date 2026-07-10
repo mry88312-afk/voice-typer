@@ -28,32 +28,23 @@ hidden += [
     'winsound',
     'ctypes',
     'pkg_resources.extern',
-    # 自家模組
-    'recorder',
-    'transcriber',
-    'enhancer',
-    'meeting_recorder',
-    'meeting_processor',
-    'streaming_recorder',
-    'fallback_transcriber',
-    'storage.config_manager',
-    'storage.env_manager',
-    'storage.history_manager',
-    'storage.usage_manager',
-    'storage.profile_manager',
-    'storage.learned_words_manager',
-    'providers.base',
-    'providers.openai_provider',
-    'providers.anthropic_provider',
-    'providers.google_provider',
-    'providers.groq_provider',
-    'ui.theme',
-    'ui.settings_window',
-    'ui.onboarding',
-    'ui.history_window',
-    'ui.usage_window',
-    'ui.waveform',
-    'ui.meeting_window',
+    # ── 新架構自家模組 ──
+    'app', 'app.paths', 'app.runtime', 'app.bootstrap', 'app.application',
+    'core', 'core.hotkeys',
+    'core.recording', 'core.recording.devices', 'core.recording.recorder',
+    'core.recording.streaming_recorder', 'core.recording.meeting_recorder',
+    'core.transcription', 'core.transcription.fallback',
+    'core.transcription.providers', 'core.transcription.providers.base',
+    'core.transcription.providers.openai_provider',
+    'core.transcription.providers.anthropic_provider',
+    'core.transcription.providers.google_provider',
+    'core.transcription.providers.groq_provider',
+    'core.meeting', 'core.meeting.processor',
+    'core.text', 'core.text.hallucinations',
+    'data', 'data.store', 'data.resources', 'data.config', 'data.env',
+    'data.profiles', 'data.usage', 'data.history', 'data.learned',
+    'ui.theme', 'ui.settings_window', 'ui.onboarding', 'ui.history_window',
+    'ui.usage_window', 'ui.waveform', 'ui.meeting_window',
     'ui.meeting_history_window',
 ]
 
@@ -61,8 +52,8 @@ hidden += [
 datas = []
 datas += collect_data_files('customtkinter')
 datas += collect_data_files('sounddevice')
-# 預設 config 範本 (使用者第一次啟動會 copy 成 config.json)
-datas += [('config.example.json', '.')]
+# resources/*.json — 預設值/provider/schema/黑名單，執行期必讀
+datas += [('resources', 'resources')]
 datas += [('.env.example', '.')]
 
 a = Analysis(
