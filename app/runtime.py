@@ -54,3 +54,12 @@ def boot_stage(name: str):
             f'{name} {_t.strftime("%Y-%m-%d %H:%M:%S")}', encoding='utf-8')
     except Exception:
         pass
+
+
+def install_global_excepthooks():
+    """背景 thread 與 tk callback 的未捕捉例外 → 寫進 log（原本會無聲消失）。"""
+    import threading
+    def _th_hook(args):
+        log.error('thread 未捕捉例外',
+                   exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+    threading.excepthook = _th_hook

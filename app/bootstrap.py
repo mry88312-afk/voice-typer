@@ -9,7 +9,7 @@ from app.paths import (
     ENV_FILE, CONFIG_FILE, HISTORY_FILE, USAGE_FILE, LEARNED_WORDS_FILE,
     ensure_user_data_initialized,
 )
-from app.runtime import log, show_message, boot_stage
+from app.runtime import log, show_message, boot_stage, install_global_excepthooks
 from ui.theme import init_app_theme
 
 
@@ -100,6 +100,7 @@ def main():
     except Exception:
         pass
     boot_stage('start')
+    install_global_excepthooks()
 
     if not _acquire_single_instance():
         if _takeover_zombie_instance():
@@ -143,6 +144,9 @@ def main():
     boot_stage('theme-ok')
     root = ctk.CTk()
     init_ctk_default_font()   # root 已存在，字型偵測安全
+    def _tk_error(exc, val, tb):
+        log.error('tk callback 例外', exc_info=(exc, val, tb))
+    root.report_callback_exception = _tk_error
     boot_stage('tk-root-ok')
     root.withdraw()
     root.title('Voice Typer')

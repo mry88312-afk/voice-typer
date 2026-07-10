@@ -10,7 +10,7 @@ _LINE_RE = re.compile(r'^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$')
 class EnvStore:
     def __init__(self, path, logger=None, retries=8, retry_delay=0.25):
         self.path = Path(path)
-        self.tmp_path = self.path.with_suffix('.env.tmp')
+        self.tmp_path = self.path.parent / (self.path.name + '.tmp')
         self.logger = logger
         self.retries = retries
         self.retry_delay = retry_delay
@@ -32,7 +32,7 @@ class EnvStore:
         for _ in range(self.retries):
             try:
                 result = {}
-                with open(self.path, 'r', encoding='utf-8') as f:
+                with open(self.path, 'r', encoding='utf-8-sig') as f:
                     for line in f:
                         line = line.strip()
                         if not line or line.startswith('#'):
@@ -56,7 +56,7 @@ class EnvStore:
         found = False
         if self.path.exists():
             try:
-                with open(self.path, 'r', encoding='utf-8') as f:
+                with open(self.path, 'r', encoding='utf-8-sig') as f:
                     for line in f:
                         stripped = line.strip()
                         if not stripped or stripped.startswith('#'):

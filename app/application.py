@@ -275,7 +275,10 @@ class VoiceTyperApp:
 
     def _start_streaming(self):
         if not self.transcriber:
-            show_message('Voice Typer', '尚未設定 OPENAI_API_KEY，無法使用 streaming')
+            show_message('Voice Typer',
+                         '金鑰尚未載入，無法使用 streaming。\n'
+                         '若你已填過 Key：等 3 秒再試一次即可。\n'
+                         '若還沒填：托盤右鍵 → 設定 → API Keys。')
             return
         log.info("⚡ Streaming 模式開始")
         self.is_streaming = True
@@ -395,7 +398,8 @@ class VoiceTyperApp:
         if not self.transcriber:
             show_message(
                 'Voice Typer',
-                '尚未設定 OPENAI_API_KEY\n請先到「設定」加入 Key',
+                '金鑰尚未載入。\n若你已填過 Key：等 3 秒再按一次即可。\n'
+                '若還沒填：托盤右鍵 → 設定 → API Keys。',
             )
             return
         log.info("🎤 開始錄音")
@@ -794,7 +798,9 @@ class VoiceTyperApp:
         if not self.transcriber:
             show_message(
                 'Voice Typer',
-                '尚未設定 OPENAI_API_KEY，無法開始會議錄音',
+                '金鑰尚未載入，無法開始會議錄音。\n'
+                '若你已填過 Key：等幾秒再試一次。\n'
+                '若還沒填：托盤右鍵 → 設定 → API Keys。',
             )
             return
 
@@ -882,7 +888,9 @@ class VoiceTyperApp:
         if not self.transcriber:
             show_message(
                 'Voice Typer',
-                '尚未設定 OPENAI_API_KEY (或其他轉錄 provider)，無法處理音檔',
+                '金鑰尚未載入，無法處理音檔。\n'
+                '若你已填過 Key：等幾秒再試一次。\n'
+                '若還沒填：托盤右鍵 → 設定 → API Keys。',
             )
             return
 
@@ -1374,25 +1382,40 @@ class VoiceTyperApp:
         )
 
     def _run_tray(self):
-        hotkey = self.config_mgr.get('hotkey', 'ctrl+shift+space')
-
-        self.tray_icon = pystray.Icon(
-            'voice_typer',
-            self._create_icon('idle'),
-            'Voice Typer · 待機',
-            self._build_tray_menu(),
-        )
-
-        def on_ready(icon):
-            icon.visible = True
-            from app.runtime import boot_stage
-            boot_stage('tray-ready')
+        import time as _time
+        backoff = 5
+        while True:
             try:
-                icon.notify(
-                    f'按 {hotkey} 開始錄音\n圖示在右下角 ^，可拖到工作列固定',
-                    'Voice Typer 已啟動',
-                )
-            except Exception:
-                pass
+                hotkey = self.config_mgr.get('hotkey', 'ctrl+shift+space')
 
-        self.tray_icon.run(setup=on_ready)
+                self.tray_icon = pystray.Icon(
+                    'voice_typer',
+                    self._create_icon('idle'),
+                    'Voice Typer · 待機',
+                    self._build_tray_menu(),
+                )
+
+                def on_ready(icon):
+                    icon.visible = True
+                    from app.runtime import boot_stage
+                    boot_stage('tray-ready')
+                    try:
+                        icon.notify(
+                            f'按 {hotkey} 開始錄音\n圖示在右下角 ^，可拖到工作列固定',
+                            'Voice Typer 已啟動',
+                        )
+                    except Exception:
+                        pass
+
+                self.tray_icon.run(setup=on_ready)
+                # run() 正常返回 = 使用者退出 → 跳出迴圈
+                break
+            except Exception as e:
+                log.error(f'托盤執行緒異常，{backoff} 秒後重建: {e}')
+                try:
+                    self.tray_icon.stop()
+                except Exception:
+                    pass
+                self.tray_icon = None
+                _time.sleep(backoff)
+                backoff = min(backoff * 2, 60)
