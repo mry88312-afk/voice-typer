@@ -1,6 +1,7 @@
 """設定視窗 — 7 個 tabs: API Keys / 引擎 / 快捷鍵 / 辨識 / 情境 / 進階"""
 import webbrowser
 import threading
+import keyboard
 import customtkinter as ctk
 
 from ui.theme import get_colors, font, Tokens, apply_font_to_descendants
@@ -793,8 +794,35 @@ class SettingsWindow(ctk.CTkToplevel):
         threading.Thread(target=run, daemon=True).start()
 
     # ---------- Tab: 快捷鍵 ----------
+    def _make_record_button(self, parent, entry, row):
+        """在 entry 右側（column 1）放一顆錄製鈕。"""
+        btn = ctk.CTkButton(parent, text='🎯 錄製', width=76, height=Tokens.HEIGHT_INPUT)
+        btn.configure(command=lambda e=entry, b=btn: self._record_hotkey_into(e, b))
+        btn.grid(row=row, column=1, sticky='e', padx=(Tokens.PAD_XS, Tokens.PAD_LG))
+        return btn
+
+    def _record_hotkey_into(self, entry, button):
+        """按下按鈕後錄製下一個組合鍵，填入 entry。"""
+        button.configure(text='請按組合鍵…', state='disabled')
+        def worker():
+            try:
+                combo = keyboard.read_hotkey(suppress=False)
+            except Exception:
+                combo = None
+            def done():
+                button.configure(text='🎯 錄製', state='normal')
+                if combo:
+                    entry.delete(0, 'end')
+                    entry.insert(0, combo)
+            try:
+                self.after(0, done)
+            except Exception:
+                pass
+        threading.Thread(target=worker, daemon=True).start()
+
     def _build_hotkey_tab(self, parent):
         parent.grid_columnconfigure(0, weight=1)
+        parent.grid_columnconfigure(1, weight=0)
 
         self._section_title(parent, '全域快捷鍵').grid(
             row=0, column=0, sticky='w',
@@ -808,9 +836,10 @@ class SettingsWindow(ctk.CTkToplevel):
         self._label(parent, '按一次開始錄音，再按結束並轉錄', secondary=True).grid(
             row=2, column=0, sticky='w', padx=Tokens.PAD_LG, pady=(0, Tokens.PAD_XS)
         )
-        self.hotkey_entry = self._entry(parent, placeholder='ctrl+shift+space')
-        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'ctrl+shift+space'))
-        self.hotkey_entry.grid(row=3, column=0, sticky='ew', padx=Tokens.PAD_LG)
+        self.hotkey_entry = self._entry(parent, placeholder='tab+`')
+        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'tab+`'))
+        self.hotkey_entry.grid(row=3, column=0, sticky='ew', padx=(Tokens.PAD_LG, Tokens.PAD_XS))
+        self._make_record_button(parent, self.hotkey_entry, 3)
 
         # Streaming 模式 (新)
         self._label(parent, 'Streaming 模式 (邊講邊出字)').grid(
@@ -826,7 +855,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self.streaming_hotkey_entry.insert(
             0, self.config_mgr.get('streaming_hotkey', 'ctrl+shift+l')
         )
-        self.streaming_hotkey_entry.grid(row=6, column=0, sticky='ew', padx=Tokens.PAD_LG)
+        self.streaming_hotkey_entry.grid(row=6, column=0, sticky='ew', padx=(Tokens.PAD_LG, Tokens.PAD_XS))
+        self._make_record_button(parent, self.streaming_hotkey_entry, 6)
 
         # 取消
         self._label(parent, '取消錄音').grid(
@@ -839,12 +869,14 @@ class SettingsWindow(ctk.CTkToplevel):
         ).grid(row=8, column=0, sticky='w', padx=Tokens.PAD_LG, pady=(0, Tokens.PAD_XS))
         self.cancel_hotkey_entry = self._entry(parent, placeholder='ctrl+shift+x')
         self.cancel_hotkey_entry.insert(0, self.config_mgr.get('cancel_hotkey', 'ctrl+shift+x'))
-        self.cancel_hotkey_entry.grid(row=9, column=0, sticky='ew', padx=Tokens.PAD_LG)
+        self.cancel_hotkey_entry.grid(row=9, column=0, sticky='ew', padx=(Tokens.PAD_LG, Tokens.PAD_XS))
+        self._make_record_button(parent, self.cancel_hotkey_entry, 9)
 
         hint = self._label(
             parent,
-            '格式: 用 + 分隔，例如 ctrl+shift+space、alt+v、ctrl+`\n'
-            '修改後需要重啟程式才會生效',
+            '格式: 用 + 分隔，例如 tab+`、ctrl+alt+space、alt+v\n'
+            '可按「🎯 錄製」直接按鍵錄製。無修飾鍵的組合（如 tab+`）會自動吞鍵，'
+            '不會把字打進游標。修改後需重啟程式才生效。',
             secondary=True,
         )
         hint.configure(justify='left')
@@ -1087,6 +1119,17 @@ class SettingsWindow(ctk.CTkToplevel):
                             self.whisper_prompt_text.get('0.0', 'end').strip())
 
         # 5. 快捷鍵
+        # 快捷鍵語法驗證：打錯字直接擋下，不寫入
+        for label, ent in (('錄音/結束', self.hotkey_entry),
+                           ('取消錄音', self.cancel_hotkey_entry),
+                           ('Streaming', self.streaming_hotkey_entry)):
+            val = ent.get().strip()
+            if val:
+                try:
+                    keyboard.parse_hotkey(val)
+                except Exception:
+                    self._show_message(f'✕ 快捷鍵「{label}」格式無效：{val}', 'danger')
+                    return
         self.config_mgr.set('hotkey',
                             self.hotkey_entry.get().strip() or 'tab+`')
         self.config_mgr.set('cancel_hotkey',
