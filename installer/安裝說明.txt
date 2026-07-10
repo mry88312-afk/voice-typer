@@ -1,0 +1,32 @@
+Voice Typer 安裝說明
+=====================
+
+【安裝步驟】
+1. 把這個 zip 解壓縮到任一資料夾（例如桌面）。
+2. 進到解壓後的資料夾，雙擊 install.bat。
+   （若 Windows 出現藍色警告視窗，點「其他資訊」→「仍要執行」。）
+3. 安裝程式會自動：
+   - 把程式複製到 %LOCALAPPDATA%\Programs\VoiceTyper
+   - 建立開機自動啟動捷徑與桌面捷徑
+   - 啟動程式
+4. 第一次啟動會出現「設定精靈」，請貼上你的 API Key（至少填一個）：
+   - OpenAI（轉錄，建議必填）
+   - Anthropic（AI 潤色，選填）
+   - Groq / Google（備援轉錄，選填）
+
+【怎麼用】
+- 預設錄音快捷鍵：按住 Tab 再按 `（鍵盤左上角、Esc 下面那顆反引號）
+  再按一次結束並自動貼上文字。
+- 快捷鍵可到「托盤圖示右鍵 → 設定 → 快捷鍵」修改（可用「🎯 錄製」直接錄）。
+
+【打不開 / 沒反應】
+- 桌面雙擊「Voice Typer」捷徑重開，或托盤右鍵 → 重新啟動。
+- 仍不行：到 %APPDATA%\VoiceTyper 把 voice-typer.log 與 boot-stage.txt 回報給我們。
+
+【解除安裝】
+- 執行 uninstall.bat。你的設定與 API Key 會保留在 %APPDATA%\VoiceTyper，
+  要一併刪除請自行刪那個資料夾。
+
+【隱私】
+- 音訊會送到 OpenAI / Groq / Google 做轉錄，文字會送 Anthropic 做潤色。
+- API Key 只存在你自己電腦的 %APPDATA%\VoiceTyper\.env，不會上傳到任何地方。
