@@ -1132,7 +1132,7 @@ class VoiceTyperApp:
         ).start()
 
     def _show_about(self, icon=None, item=None):
-        hotkey = self.config_mgr.get('hotkey', 'tab+`')
+        hotkey = self.config_mgr.get('hotkey', 'ctrl+alt+z')
         cancel = self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x')
         self._msgbox_async(
             f'Voice Typer v2.0\n\n'
@@ -1245,7 +1245,7 @@ class VoiceTyperApp:
             pass
 
         bindings = [
-            ('錄音/結束', self.config_mgr.get('hotkey', 'tab+`'),
+            ('錄音/結束', self.config_mgr.get('hotkey', 'ctrl+alt+z'),
              self._toggle_recording),
             ('取消錄音', self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x'),
              self._cancel_recording),
@@ -1309,7 +1309,7 @@ class VoiceTyperApp:
 
         log.info("=" * 50)
         log.info("🎙️  Voice Typer 已啟動 (商業版 v2)")
-        log.info(f"   錄音/結束: {self.config_mgr.get('hotkey', 'tab+`')}")
+        log.info(f"   錄音/結束: {self.config_mgr.get('hotkey', 'ctrl+alt+z')}")
         log.info(f"   取消錄音:  {self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x')}")
         log.info(f"   AI 潤色:   {'開啟' if self.enhancer else '關閉'}")
         log.info(f"   資料目錄:  {BASE_DIR}")

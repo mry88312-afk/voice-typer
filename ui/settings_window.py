@@ -836,8 +836,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self._label(parent, '按一次開始錄音，再按結束並轉錄', secondary=True).grid(
             row=2, column=0, sticky='w', padx=Tokens.PAD_LG, pady=(0, Tokens.PAD_XS)
         )
-        self.hotkey_entry = self._entry(parent, placeholder='tab+`')
-        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'tab+`'))
+        self.hotkey_entry = self._entry(parent, placeholder='ctrl+alt+z')
+        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'ctrl+alt+z'))
         self.hotkey_entry.grid(row=3, column=0, sticky='ew', padx=(Tokens.PAD_LG, Tokens.PAD_XS))
         self._make_record_button(parent, self.hotkey_entry, 3)
 
@@ -1131,7 +1131,7 @@ class SettingsWindow(ctk.CTkToplevel):
                     self._show_message(f'✕ 快捷鍵「{label}」格式無效：{val}', 'danger')
                     return
         self.config_mgr.set('hotkey',
-                            self.hotkey_entry.get().strip() or 'tab+`')
+                            self.hotkey_entry.get().strip() or 'ctrl+alt+z')
         self.config_mgr.set('cancel_hotkey',
                             self.cancel_hotkey_entry.get().strip() or 'ctrl+alt+x')
         self.config_mgr.set('streaming_hotkey',

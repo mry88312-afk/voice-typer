@@ -52,7 +52,7 @@
       "title": "快捷鍵",
       "fields": [
         {"type": "section", "label": "全域快捷鍵"},
-        {"type": "hotkey", "bind": "hotkey", "label": "開始 / 結束錄音", "default": "tab+`"},
+        {"type": "hotkey", "bind": "hotkey", "label": "開始 / 結束錄音", "default": "ctrl+alt+z"},
         {"type": "hotkey", "bind": "streaming_hotkey", "label": "Streaming 模式", "default": "ctrl+shift+l"},
         {"type": "hotkey", "bind": "cancel_hotkey", "label": "取消錄音", "default": "ctrl+alt+x"},
         {"type": "note", "label": "避免與輸入法 (Ctrl+Shift+Space) 或 Windows 快捷鍵衝突"}

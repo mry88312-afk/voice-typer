@@ -417,7 +417,7 @@ class OnboardingWizard(ctk.CTkToplevel):
             border_color=self.colors['border'],
             font=font(Tokens.FONT_MD),
         )
-        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'tab+`'))
+        self.hotkey_entry.insert(0, self.config_mgr.get('hotkey', 'ctrl+alt+z'))
         self.hotkey_entry.grid(row=3, column=0, sticky='ew', pady=(0, Tokens.PAD_MD))
 
         ctk.CTkLabel(
@@ -441,7 +441,7 @@ class OnboardingWizard(ctk.CTkToplevel):
         self.next_btn.configure(text='下一步 →', command=self._save_hotkey)
 
     def _save_hotkey(self):
-        self.config_mgr.set('hotkey', self.hotkey_entry.get().strip() or 'tab+`')
+        self.config_mgr.set('hotkey', self.hotkey_entry.get().strip() or 'ctrl+alt+z')
         self.config_mgr.set('cancel_hotkey', self.cancel_hotkey_entry.get().strip() or 'ctrl+shift+x')
         self._do_next()
 
@@ -454,7 +454,7 @@ class OnboardingWizard(ctk.CTkToplevel):
         )
         title.grid(row=0, column=0, sticky='w', pady=(Tokens.PAD_XL, Tokens.PAD_MD))
 
-        hotkey = self.config_mgr.get('hotkey', 'tab+`')
+        hotkey = self.config_mgr.get('hotkey', 'ctrl+alt+z')
         cancel = self.config_mgr.get('cancel_hotkey', 'ctrl+shift+x')
 
         desc = ctk.CTkLabel(
