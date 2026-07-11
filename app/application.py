@@ -275,10 +275,10 @@ class VoiceTyperApp:
 
     def _start_streaming(self):
         if not self.transcriber:
-            show_message('Voice Typer',
-                         '金鑰尚未載入，無法使用 streaming。\n'
-                         '若你已填過 Key：等 3 秒再試一次即可。\n'
-                         '若還沒填：托盤右鍵 → 設定 → API Keys。')
+            self._msgbox_async(
+                '金鑰尚未載入，無法使用 streaming。\n'
+                '若你已填過 Key：等 3 秒再試一次即可。\n'
+                '若還沒填：托盤右鍵 → 設定 → API Keys。')
             return
         log.info("⚡ Streaming 模式開始")
         self.is_streaming = True
@@ -367,7 +367,7 @@ class VoiceTyperApp:
             log.error(f"streaming 啟動失敗: {e}")
             self.is_streaming = False
             self._update_tray('idle')
-            show_message('Voice Typer', f'Streaming 啟動失敗: {e}')
+            self._msgbox_async(f'Streaming 啟動失敗: {e}')
 
     def _stop_streaming(self, cancel: bool = False):
         if not self.is_streaming:
@@ -396,11 +396,9 @@ class VoiceTyperApp:
             self._rebuild_transcriber()
             self._rebuild_enhancer()
         if not self.transcriber:
-            show_message(
-                'Voice Typer',
+            self._msgbox_async(
                 '金鑰尚未載入。\n若你已填過 Key：等 3 秒再按一次即可。\n'
-                '若還沒填：托盤右鍵 → 設定 → API Keys。',
-            )
+                '若還沒填：托盤右鍵 → 設定 → API Keys。')
             return
         log.info("🎤 開始錄音")
         try:
@@ -796,12 +794,10 @@ class VoiceTyperApp:
             self._notify_tray('已經在錄音中')
             return
         if not self.transcriber:
-            show_message(
-                'Voice Typer',
+            self._msgbox_async(
                 '金鑰尚未載入，無法開始會議錄音。\n'
                 '若你已填過 Key：等幾秒再試一次。\n'
-                '若還沒填：托盤右鍵 → 設定 → API Keys。',
-            )
+                '若還沒填：托盤右鍵 → 設定 → API Keys。')
             return
 
         # 開進度視窗
@@ -835,7 +831,7 @@ class VoiceTyperApp:
                 self.meeting_progress_window.destroy()
             except Exception:
                 pass
-            show_message('Voice Typer', f'會議錄音啟動失敗: {e}')
+            self._msgbox_async(f'會議錄音啟動失敗: {e}')
 
     def _pause_meeting(self, is_paused: bool):
         if is_paused:
@@ -886,12 +882,10 @@ class VoiceTyperApp:
             self._notify_tray('已經在錄音或處理中')
             return
         if not self.transcriber:
-            show_message(
-                'Voice Typer',
+            self._msgbox_async(
                 '金鑰尚未載入，無法處理音檔。\n'
                 '若你已填過 Key：等幾秒再試一次。\n'
-                '若還沒填：托盤右鍵 → 設定 → API Keys。',
-            )
+                '若還沒填：托盤右鍵 → 設定 → API Keys。')
             return
 
         from tkinter import filedialog
@@ -1127,16 +1121,24 @@ class VoiceTyperApp:
         except Exception:
             pass
 
+    def _msgbox_async(self, text, error=False):
+        """在獨立執行緒開原生訊息框，絕不阻塞呼叫者。
+        托盤選單回呼跑在 pystray 執行緒、快捷鍵回呼跑在 keyboard hook 執行緒，
+        若在這些執行緒直接開 MessageBox 會阻塞其訊息迴圈 → 視窗關不掉、
+        甚至拖垮 keyboard 低階 hook 讓快捷鍵失效。丟到自己的執行緒就安全。"""
+        threading.Thread(
+            target=lambda: show_message('Voice Typer', text, error=error),
+            daemon=True,
+        ).start()
+
     def _show_about(self, icon=None, item=None):
-        hotkey = self.config_mgr.get('hotkey', 'ctrl+shift+space')
-        cancel = self.config_mgr.get('cancel_hotkey', 'ctrl+shift+x')
-        show_message(
-            'Voice Typer',
+        hotkey = self.config_mgr.get('hotkey', 'tab+`')
+        cancel = self.config_mgr.get('cancel_hotkey', 'ctrl+alt+x')
+        self._msgbox_async(
             f'Voice Typer v2.0\n\n'
             f'錄音/結束: {hotkey}\n'
             f'取消錄音: {cancel}\n\n'
-            f'設定檔位置:\n{BASE_DIR}',
-            error=False,
+            f'設定檔位置:\n{BASE_DIR}'
         )
 
     def _restart(self, icon=None, item=None):
