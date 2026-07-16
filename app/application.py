@@ -78,6 +78,9 @@ class VoiceTyperApp:
         self.is_processing = False
         self._processing_since = None
         self._last_wd_tick = time.time()
+        self._last_key_seen = time.time()     # 最後一次收到任何鍵盤事件（hook 活性偵測）
+        self._app_started_at = time.time()    # 自動重啟的防迴圈基準
+        self._hook_probe_ok_logged = False
         self.lock = threading.Lock()
 
         # UI 元件 (lazy init)
@@ -1173,8 +1176,59 @@ class VoiceTyperApp:
             log.error(f'重啟失敗: {e}')
         os._exit(0)
 
+    def _on_key_event(self, event):
+        """被動監聽：記錄最後一次收到鍵盤事件的時間。
+        這個 handler 跟 hotkey 共用同一個 OS 低階 hook——hook 死了它也收不到，
+        正是 hook 活性偵測的依據。（_register_hotkeys 的 unhook_all_hotkeys
+        只清 hotkey，不會清掉這個 generic hook。）"""
+        self._last_key_seen = time.time()
+
+    @staticmethod
+    def _desktop_unlocked() -> bool:
+        """鎖定畫面 / UAC 安全桌面時 OpenInputDesktop 會失敗 → 此時不做 hook 探測
+        （鎖定中 hook 本來就收不到事件，硬測會誤判成 hook 死亡而亂重啟）。"""
+        try:
+            import ctypes
+            DESKTOP_READOBJECTS = 0x0001
+            h = ctypes.windll.user32.OpenInputDesktop(0, False, DESKTOP_READOBJECTS)
+            if h:
+                ctypes.windll.user32.CloseDesktop(h)
+                return True
+            return False
+        except Exception:
+            return True   # 查不出來就照舊探測
+
+    def _probe_hook_alive(self):
+        """注入一顆無害的 F24 鍵：hook 活著就會收到（_last_key_seen 更新）；
+        2 秒後還沒收到 → hook 已被 Windows 丟棄 → 自動重啟整個程式。
+        （Windows 在系統卡頓時會悄悄丟棄低階鍵盤 hook；丟棄後 keyboard 的
+        add_hotkey 只是空轉、無法復活，重啟程序是唯一可靠的解法。）"""
+        sent_at = time.time()
+        try:
+            keyboard.send('f24')
+        except Exception as e:
+            log.error(f'hook 探測注入失敗: {e}')
+            return
+
+        def _verdict():
+            if self._last_key_seen >= sent_at:
+                if not self._hook_probe_ok_logged:
+                    self._hook_probe_ok_logged = True
+                    log.info('🩺 鍵盤 hook 活性探測正常（本次啟動只記錄這一次）')
+                return
+            if self.is_recording or self.is_processing:
+                return                    # 正在錄音/處理，別打斷，下一輪再驗
+            if time.time() - self._app_started_at < 600:
+                log.error('⚠ F24 探測無回應（hook 疑似已死），但啟動未滿 10 分鐘 → 暫不自動重啟（防迴圈）')
+                return
+            log.error('⚠ 鍵盤 hook 已被系統丟棄（F24 探測無回應）→ 自動重啟復活')
+            self._restart()
+
+        self.root.after(2000, _verdict)
+
     def _state_watchdog(self):
-        """每 30 秒巡檢：1) 卡在處理中 >5 分鐘 → 強制重設  2) 偵測睡醒 → 立刻重註冊快捷鍵"""
+        """每 30 秒巡檢：1) 卡在處理中 >5 分鐘 → 強制重設  2) 偵測睡醒 → 立刻重註冊快捷鍵
+        3) 太久沒收到任何鍵盤事件 → F24 探測 hook 是否還活著，死了自動重啟"""
         now = time.time()
         try:
             if (self.is_processing and self._processing_since
@@ -1188,6 +1242,10 @@ class VoiceTyperApp:
             if now - self._last_wd_tick > 90:      # 時鐘跳躍 → 剛從睡眠喚醒
                 log.info('💤 偵測到睡眠喚醒，立即重新註冊快捷鍵')
                 self._register_hotkeys()
+            if (now - self._last_key_seen > 90
+                    and not self.is_recording and not self.is_processing
+                    and self._desktop_unlocked()):
+                self._probe_hook_alive()
         except Exception as e:
             log.error(f'state watchdog: {e}')
         self._last_wd_tick = now
@@ -1292,6 +1350,11 @@ class VoiceTyperApp:
 
     def start(self):
         self._register_hotkeys()
+        # 被動鍵盤事件監聽（hook 活性偵測用）
+        try:
+            keyboard.hook(self._on_key_event)
+        except Exception as e:
+            log.error(f'安裝鍵盤活性監聽失敗: {e}')
         # 看門狗：2 分鐘後開始週期性自癒
         self.root.after(2 * 60 * 1000, self._hotkey_watchdog)
         # 安全網：開機 3 秒後若金鑰沒讀到 (race)，自動補建
