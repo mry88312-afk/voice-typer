@@ -21,6 +21,14 @@ class TranscriberBase(ABC):
         raise NotImplementedError
 
 
+# 系統級語言防護：所有 enhancer 一律套用，不依賴各 profile 自己記得寫。
+# 措辭為條件式（「若輸出包含中文」），避免影響輸出英文的 profile（commit、翻譯）。
+LANGUAGE_GUARD = (
+    '【系統規則，優先於下方所有指示】若輸出包含中文，一律使用繁體中文（台灣用語），'
+    '嚴禁出現任何簡體字；即使輸入混有簡體字，也必須全部轉為繁體後輸出。\n\n'
+)
+
+
 class EnhancerBase(ABC):
     provider_id: str = ''
     model: str = ''
@@ -28,7 +36,7 @@ class EnhancerBase(ABC):
 
     def __init__(self, api_key: str, prompt: str = '', model: str = None):
         self.api_key = api_key
-        self.prompt = prompt or ''
+        self.prompt = LANGUAGE_GUARD + (prompt or '')
         if model:
             self.model = model
 
