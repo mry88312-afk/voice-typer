@@ -80,7 +80,7 @@ class VoiceTyperApp:
         self._last_wd_tick = time.time()
         self._last_key_seen = time.time()     # 最後一次收到任何鍵盤事件（hook 活性偵測）
         self._app_started_at = time.time()    # 自動重啟的防迴圈基準
-        self._hook_probe_ok_logged = False
+        self._hook_dead_strikes = 0           # 「有鍵盤活動但 hook 沒反應」連續次數
         self.lock = threading.Lock()
 
         # UI 元件 (lazy init)
@@ -1198,37 +1198,30 @@ class VoiceTyperApp:
         except Exception:
             return True   # 查不出來就照舊探測
 
-    def _probe_hook_alive(self):
-        """注入一顆無害的 F24 鍵：hook 活著就會收到（_last_key_seen 更新）；
-        2 秒後還沒收到 → hook 已被 Windows 丟棄 → 自動重啟整個程式。
-        （Windows 在系統卡頓時會悄悄丟棄低階鍵盤 hook；丟棄後 keyboard 的
-        add_hotkey 只是空轉、無法復活，重啟程序是唯一可靠的解法。）"""
-        sent_at = time.time()
+    @staticmethod
+    def _keyboard_activity_since_last_sweep() -> bool:
+        """GetAsyncKeyState 的 bit 0 = 該鍵自上次查詢後有沒有被按過。
+        掃 VK 8..255（跳過 1..6 滑鼠鍵），不注入、不依賴 hook，
+        就能知道「這段時間使用者有沒有真的敲過鍵盤」。
+        （前一版用注入 F24 探測，實測會被 Windows 完整性機制悄悄丟棄
+        造成誤判重啟迴圈——真實按鍵證據才可靠。）"""
         try:
-            keyboard.send('f24')
-        except Exception as e:
-            log.error(f'hook 探測注入失敗: {e}')
-            return
-
-        def _verdict():
-            if self._last_key_seen >= sent_at:
-                if not self._hook_probe_ok_logged:
-                    self._hook_probe_ok_logged = True
-                    log.info('🩺 鍵盤 hook 活性探測正常（本次啟動只記錄這一次）')
-                return
-            if self.is_recording or self.is_processing:
-                return                    # 正在錄音/處理，別打斷，下一輪再驗
-            if time.time() - self._app_started_at < 600:
-                log.error('⚠ F24 探測無回應（hook 疑似已死），但啟動未滿 10 分鐘 → 暫不自動重啟（防迴圈）')
-                return
-            log.error('⚠ 鍵盤 hook 已被系統丟棄（F24 探測無回應）→ 自動重啟復活')
-            self._restart()
-
-        self.root.after(2000, _verdict)
+            import ctypes
+            GetAsyncKeyState = ctypes.windll.user32.GetAsyncKeyState
+            hit = False
+            for vk in range(8, 256):
+                if GetAsyncKeyState(vk) & 0x0001:
+                    hit = True   # 不 break：順便清掉所有鍵的 bit0，讓下一輪窗口乾淨
+            return hit
+        except Exception:
+            return False
 
     def _state_watchdog(self):
         """每 30 秒巡檢：1) 卡在處理中 >5 分鐘 → 強制重設  2) 偵測睡醒 → 立刻重註冊快捷鍵
-        3) 太久沒收到任何鍵盤事件 → F24 探測 hook 是否還活著，死了自動重啟"""
+        3) 系統層看得到鍵盤活動、hook 卻長時間沒收到事件 → hook 已死，自動重啟復活
+        （Windows 會在卡頓時悄悄丟棄低階鍵盤 hook；丟棄後 add_hotkey 只是空轉，
+        重啟程序是唯一可靠復活方式。hook 活著時兩個訊號源都會看到按鍵，
+        所以「有敲鍵盤但 hook 沒反應」連續三次 = 鐵證，不會誤判。）"""
         now = time.time()
         try:
             if (self.is_processing and self._processing_since
@@ -1242,10 +1235,21 @@ class VoiceTyperApp:
             if now - self._last_wd_tick > 90:      # 時鐘跳躍 → 剛從睡眠喚醒
                 log.info('💤 偵測到睡眠喚醒，立即重新註冊快捷鍵')
                 self._register_hotkeys()
-            if (now - self._last_key_seen > 90
-                    and not self.is_recording and not self.is_processing
-                    and self._desktop_unlocked()):
-                self._probe_hook_alive()
+            # hook 活性：真實鍵盤活動 vs hook 收到的事件
+            kb_active = self._keyboard_activity_since_last_sweep()
+            hook_silent = (now - self._last_key_seen) > 60
+            if kb_active and hook_silent and self._desktop_unlocked():
+                self._hook_dead_strikes += 1
+                log.warning(f'⚠ 偵測到鍵盤活動但 hook 無反應（{self._hook_dead_strikes}/3）')
+                if (self._hook_dead_strikes >= 3
+                        and not self.is_recording and not self.is_processing):
+                    if now - self._app_started_at < 600:
+                        log.error('hook 疑似已死，但啟動未滿 10 分鐘 → 暫不自動重啟（防迴圈）')
+                    else:
+                        log.error('⚠ 鍵盤 hook 已被系統丟棄（有鍵盤活動但 hook 連續無反應）→ 自動重啟復活')
+                        self._restart()
+            elif not hook_silent:
+                self._hook_dead_strikes = 0
         except Exception as e:
             log.error(f'state watchdog: {e}')
         self._last_wd_tick = now
