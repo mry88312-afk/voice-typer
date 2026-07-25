@@ -1147,6 +1147,11 @@ class VoiceTyperApp:
     def _restart(self, icon=None, item=None):
         log.info('🔄 使用者要求重新啟動')
         try:
+            from app import watchdog
+            watchdog.disable('使用者重啟')
+        except Exception:
+            pass
+        try:
             if self.tray_icon:
                 self.tray_icon.stop()
         except Exception:
@@ -1260,10 +1265,20 @@ class VoiceTyperApp:
             (BASE_DIR / 'heartbeat.txt').write_text(str(time.time()), encoding='utf-8')
         except Exception:
             pass
+        try:
+            from app import watchdog
+            watchdog.beat()     # 這行能執行 = mainloop 還活著
+        except Exception:
+            pass
         self.root.after(15_000, self._heartbeat_tick)
 
     def _quit(self, icon=None, item=None):
         log.info("👋 退出")
+        try:
+            from app import watchdog
+            watchdog.disable('使用者退出')
+        except Exception:
+            pass
         try:
             (BASE_DIR / 'heartbeat.txt').unlink(missing_ok=True)
             (BASE_DIR / 'voice-typer.pid').unlink(missing_ok=True)
@@ -1342,15 +1357,20 @@ class VoiceTyperApp:
         self.root.after(2 * 60 * 1000, self._hotkey_watchdog)
 
     # ---------- 啟動流程 ----------
-    def _ensure_transcriber_ready(self):
+    def _ensure_transcriber_ready(self, attempt=1):
         """安全網：若啟動瞬間 .env 被鎖導致沒讀到金鑰 (transcriber=None)，
-        開機幾秒後 race 結束，自動重讀補建，使用者完全無感。"""
-        if not self.transcriber:
-            log.info('安全網：transcriber 仍未建立，重讀金鑰補建...')
-            self._rebuild_transcriber()
-            self._rebuild_enhancer()
-            if self.transcriber:
-                log.info('安全網：transcriber 已補建成功')
+        每 3 秒重試補建直到成功 (最多 20 次 = 1 分鐘)，使用者完全無感。"""
+        if self.transcriber:
+            return
+        log.info(f'安全網：transcriber 仍未建立，重讀金鑰補建 (第 {attempt} 次)...')
+        self._rebuild_transcriber()
+        self._rebuild_enhancer()
+        if self.transcriber:
+            log.info('安全網：transcriber 已補建成功')
+        elif attempt < 20:
+            self.root.after(3000, lambda: self._ensure_transcriber_ready(attempt + 1))
+        else:
+            log.error('安全網：重試 20 次仍無法建立 transcriber，請檢查設定的 API Key')
 
     def start(self):
         self._register_hotkeys()

@@ -41,6 +41,11 @@ def show_message(title, text, error=True):
 
 def fatal(title, text):
     log.error(f"{title}: {text}")
+    try:
+        from app import watchdog
+        watchdog.disable('fatal')   # 訊息框等使用者按掉期間，別讓看門狗誤判卡死
+    except Exception:
+        pass
     show_message(title, text, error=True)
     sys.exit(1)
 
@@ -52,6 +57,11 @@ def boot_stage(name: str):
         import time as _t
         (BASE_DIR / 'boot-stage.txt').write_text(
             f'{name} {_t.strftime("%Y-%m-%d %H:%M:%S")}', encoding='utf-8')
+    except Exception:
+        pass
+    try:
+        from app import watchdog
+        watchdog.notify_stage(name)
     except Exception:
         pass
 

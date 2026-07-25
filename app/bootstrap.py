@@ -116,6 +116,11 @@ def main():
             sys.exit(0)
     boot_stage('mutex-ok')
 
+    # 開機看門狗：從這一刻起，時限內必須進到 mainloop 心跳，否則自我重啟。
+    # 放在 mutex 之後才啟動：第二實例的「已在執行中」訊息框會等使用者，不能被誤判。
+    from app import watchdog
+    watchdog.start()
+
     ensure_user_data_initialized()
     load_dotenv(ENV_FILE, override=True)
     boot_stage('data-init')
@@ -166,11 +171,14 @@ def main():
         log.info('首次安裝 (.env 與 config.json 連續重試都不存在) → 顯示 Onboarding')
         try:
             from ui.onboarding import OnboardingWizard
+            watchdog.pause()    # 使用者填 key 沒有時限，暫停看門狗計時
             wizard = OnboardingWizard(root, env, config)
             root.wait_window(wizard)
             load_dotenv(ENV_FILE, override=True)
         except Exception as e:
             log.error(f'Onboarding 顯示失敗，略過直接進入主程式: {e}')
+        finally:
+            watchdog.resume()
     elif not has_keys:
         # .env 在但讀不到 key (可能開機鎖檔閃失) → 不跳設定頁，進托盤待命
         log.info('.env 存在但暫時讀不到 key，直接進托盤 (可從設定補)')
